@@ -1,0 +1,1094 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>大富翁英文總複習 (English Monopoly Review Game)</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Google Fonts Inter & Outfit -->
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&family=Noto+Sans+TC:wght@500;700;900&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Fredoka', 'Noto Sans TC', sans-serif;
+      background-color: #fefce8;
+      user-select: none;
+    }
+    /* 3D Dice Styling */
+    .dice-scene {
+      width: 90px;
+      height: 90px;
+      perspective: 400px;
+      cursor: pointer;
+    }
+    .dice-cube {
+      width: 100%;
+      height: 100%;
+      position: relative;
+      transform-style: preserve-3d;
+      transition: transform 1.2s cubic-bezier(0.2, 0.85, 0.32, 1.2);
+    }
+    .dice-face {
+      position: absolute;
+      width: 90px;
+      height: 90px;
+      background: #ffffff;
+      border: 4px solid #1e293b;
+      border-radius: 18px;
+      font-size: 36px;
+      font-weight: 900;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: inset 0 0 12px rgba(0,0,0,0.15), 0 8px 15px rgba(0,0,0,0.1);
+    }
+    .dice-face--1 { transform: rotateY(0deg) translateZ(45px); color: #ef4444; }
+    .dice-face--2 { transform: rotateY(90deg) translateZ(45px); color: #3b82f6; }
+    .dice-face--3 { transform: rotateY(180deg) translateZ(45px); color: #10b981; }
+    .dice-face--4 { transform: rotateY(-90deg) translateZ(45px); color: #f59e0b; }
+    .dice-face--5 { transform: rotateX(90deg) translateZ(45px); color: #8b5cf6; }
+    .dice-face--6 { transform: rotateX(-90deg) translateZ(45px); color: #06b6d4; }
+
+    /* Tile Animations */
+    .active-tile {
+      box-shadow: 0 0 0 6px #f59e0b, 0 0 20px #f59e0b;
+      transform: scale(1.03);
+      z-index: 10;
+    }
+    
+    /* Custom Scrollbar */
+    ::-webkit-scrollbar {
+      width: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #f1f5f9;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 4px;
+    }
+  </style>
+</head>
+<body class="min-h-screen text-slate-800 flex flex-col items-center justify-center p-2 md:p-4">
+
+  <!-- 1. 初始設定頁面 (Start Screen) -->
+  <div id="start-screen" class="w-full max-w-4xl bg-white rounded-3xl shadow-2xl border-4 border-amber-300 p-6 md:p-8 flex flex-col items-center my-auto">
+    <div class="text-center mb-6">
+      <span class="inline-block px-4 py-1 bg-amber-100 text-amber-800 font-bold text-lg rounded-full mb-2">國小英文課堂複習神器 🎲</span>
+      <h1 class="text-3xl md:text-5xl font-black text-amber-600 tracking-wide drop-shadow-sm">大富翁英文總複習</h1>
+      <p class="text-slate-500 mt-2 font-medium">English Monopoly Review Game</p>
+    </div>
+
+    <div class="w-full grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+      <!-- 遊戲參數設定 -->
+      <div class="bg-amber-50/80 p-5 rounded-2xl border-2 border-amber-200 flex flex-col justify-between">
+        <h2 class="text-xl font-bold text-amber-900 mb-4 flex items-center gap-2">
+          ⚙️ 遊戲規則設定
+        </h2>
+        
+        <div class="space-y-4">
+          <div>
+            <label class="block text-sm font-bold text-slate-700 mb-1">玩家人數 (2 ~ 5 人)</label>
+            <div class="flex gap-2">
+              <template x-for="n in [2,3,4,5]">
+                <!-- Handled by JS -->
+              </template>
+              <select id="player-count-select" class="w-full p-3 bg-white border-2 border-amber-300 rounded-xl font-bold text-lg text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-500">
+                <option value="2">2 位玩家</option>
+                <option value="3" selected>3 位玩家</option>
+                <option value="4">4 位玩家</option>
+                <option value="5">5 位玩家</option>
+              </select>
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-sm font-bold text-slate-700 mb-1">遊戲時間倒數 (分鐘)</label>
+            <input type="number" id="game-time-input" min="3" max="30" value="10" class="w-full p-3 bg-white border-2 border-amber-300 rounded-xl font-bold text-lg text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-500">
+            <p class="text-xs text-amber-700 mt-1">* 建議時間：10 分鐘 (可微調 3~30 分鐘)</p>
+          </div>
+
+          <div>
+            <label class="block text-sm font-bold text-slate-700 mb-1">玩家起始金額 ($)</label>
+            <input type="number" id="start-money-input" min="400" max="1000" step="50" value="500" class="w-full p-3 bg-white border-2 border-amber-300 rounded-xl font-bold text-lg text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-500">
+            <p class="text-xs text-amber-700 mt-1">* 建議金額：400 ~ 1000 元 (預設 500 元)</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- 玩家資料輸入與頭貼選擇 -->
+      <div class="bg-amber-50/80 p-5 rounded-2xl border-2 border-amber-200">
+        <h2 class="text-xl font-bold text-amber-900 mb-4 flex items-center gap-2">
+          👤 玩家角色選擇
+        </h2>
+        <div id="player-inputs-container" class="space-y-3 max-h-[280px] overflow-y-auto pr-2">
+          <!-- JS 動態生成玩家輸入欄位 -->
+        </div>
+      </div>
+    </div>
+
+    <!-- 開始遊戲按鈕 -->
+    <button id="start-game-btn" class="w-full max-w-md py-4 bg-emerald-500 hover:bg-emerald-600 active:scale-95 text-white font-black text-2xl rounded-2xl shadow-xl border-b-4 border-emerald-700 transition duration-150 flex items-center justify-center gap-3">
+      🚀 開始大富翁遊戲！
+    </button>
+  </div>
+
+  <!-- 2. 大富翁遊戲主地圖頁面 (Game Board Screen) -->
+  <div id="game-screen" class="hidden w-full max-w-6xl h-full flex-col items-center my-auto">
+    
+    <!-- 頂部資訊列 (計時器、當前玩家) -->
+    <div class="w-full bg-white rounded-2xl shadow-md border-2 border-amber-300 p-3 mb-3 flex flex-wrap items-center justify-between gap-2">
+      <div class="flex items-center gap-3">
+        <div id="current-player-badge" class="px-4 py-2 rounded-xl text-white font-bold text-lg flex items-center gap-2 shadow">
+          <!-- 動態顯示當前玩家 -->
+        </div>
+        <div id="round-indicator" class="text-sm font-bold text-slate-500">
+          輪到你擲骰子囉！
+        </div>
+      </div>
+
+      <!-- 倒數計時器 -->
+      <div class="flex items-center gap-2 bg-rose-100 text-rose-700 px-4 py-2 rounded-xl border border-rose-300 font-black text-xl">
+        ⏱️ 剩餘時間：<span id="timer-display">10:00</span>
+      </div>
+    </div>
+
+    <!-- 口字型動態地圖 Grid (6x6) -->
+    <div class="w-full aspect-square max-w-[820px] bg-amber-100/60 p-2 rounded-3xl border-4 border-amber-300 shadow-2xl relative">
+      <div id="board-grid" class="w-full h-full grid grid-cols-6 grid-rows-6 gap-1.5 md:gap-2">
+        <!-- JS 動態生成 20 格格子 -->
+      </div>
+
+      <!-- 口字型中央區域 (骰子 + 遊戲日誌) -->
+      <div class="absolute inset-[17%] bg-white/95 backdrop-blur-sm rounded-2xl border-2 border-amber-200 shadow-inner p-3 md:p-4 flex flex-col justify-between items-center overflow-hidden">
+        
+        <!-- 中央頂部：標題與玩家資產列 -->
+        <div class="w-full flex flex-col items-center">
+          <div id="players-dashboard" class="w-full flex justify-center gap-2 flex-wrap mb-2">
+            <!-- 動態產生所有玩家狀態卡 -->
+          </div>
+        </div>
+
+        <!-- 中央中部：3D 擲骰子區 -->
+        <div class="flex flex-col items-center justify-center my-auto">
+          <div id="dice-container" class="dice-scene" title="點擊骰子擲點！">
+            <div id="dice-cube" class="dice-cube">
+              <div class="dice-face dice-face--1">1</div>
+              <div class="dice-face dice-face--2">2</div>
+              <div class="dice-face dice-face--3">3</div>
+              <div class="dice-face dice-face--4">4</div>
+              <div class="dice-face dice-face--5">5</div>
+              <div class="dice-face dice-face--6">6</div>
+            </div>
+          </div>
+          <p id="dice-hint" class="text-xs md:text-sm font-bold text-amber-700 mt-2 bg-amber-100 px-3 py-1 rounded-full animate-bounce">
+            👇 點擊 3D 骰子擲點
+          </p>
+        </div>
+
+        <!-- 中央底部：遊戲訊息歷程紀錄 -->
+        <div class="w-full bg-slate-50 border border-slate-200 rounded-xl p-2 h-20 overflow-y-auto text-xs md:text-sm text-slate-700 font-medium shadow-inner" id="game-log">
+          <div class="text-emerald-600 font-bold">🎮 遊戲正式開始！請點擊骰子進行移動。</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3. 答題 Modal 視窗 -->
+  <div id="question-modal" class="fixed inset-0 bg-black/60 backdrop-blur-sm hidden items-center justify-center p-4 z-50">
+    <div class="bg-white rounded-3xl shadow-2xl border-4 border-amber-400 w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh]">
+      <!-- Modal Header -->
+      <div class="bg-amber-400 p-4 text-amber-950 flex justify-between items-center font-black text-xl">
+        <span id="modal-player-title">👤 玩家答題時間</span>
+        <span class="bg-white/80 text-amber-900 text-sm px-3 py-1 rounded-full">複習題</span>
+      </div>
+
+      <!-- Modal Body -->
+      <div class="p-5 overflow-y-auto space-y-4 flex-1">
+        <!-- SVG 插圖呈現區 -->
+        <div id="question-illustration" class="w-full min-h-[160px] max-h-[220px] bg-slate-50 rounded-2xl border-2 border-slate-200 flex items-center justify-center p-2 overflow-hidden">
+          <!-- 向量繪製 SVG -->
+        </div>
+
+        <!-- 題目內文 -->
+        <div class="bg-amber-50 p-4 rounded-2xl border border-amber-200">
+          <div id="question-text" class="text-lg md:text-xl font-bold text-slate-800 leading-relaxed">
+            <!-- 題目內容 -->
+          </div>
+        </div>
+
+        <!-- 提示區（若有提示卡可觸發） -->
+        <div id="hint-container" class="hidden space-y-2">
+          <div id="hint-buttons-wrapper" class="flex flex-col gap-2">
+            <!-- JS 動態產生提示卡按鈕 -->
+          </div>
+          <div id="hint-text" class="hidden p-3 bg-purple-100 text-purple-900 border border-purple-300 rounded-xl font-bold text-sm text-center">
+            <!-- 提示結果通知（不顯示題目文字，僅提示請老師或同學口頭說明） -->
+          </div>
+        </div>
+      </div>
+
+      <!-- Modal Footer (老師/評判判定按鈕) -->
+      <div class="p-4 bg-slate-100 border-t border-slate-200 flex gap-4">
+        <button id="answer-wrong-btn" class="flex-1 py-3 bg-rose-500 hover:bg-rose-600 active:scale-95 text-white font-black text-lg rounded-2xl shadow-lg border-b-4 border-rose-700 transition">
+          ❌ 答錯
+        </button>
+        <button id="answer-correct-btn" class="flex-1 py-3 bg-emerald-500 hover:bg-emerald-600 active:scale-95 text-white font-black text-lg rounded-2xl shadow-lg border-b-4 border-emerald-700 transition">
+          ⭕ 答對 (領取 $100 獎勵)
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 4. 購地與地主過路費 Modal -->
+  <div id="action-modal" class="fixed inset-0 bg-black/60 backdrop-blur-sm hidden items-center justify-center p-4 z-50">
+    <div class="bg-white rounded-3xl shadow-2xl border-4 border-amber-400 w-full max-w-md p-6 text-center space-y-5">
+      <div id="action-icon" class="text-6xl">🏡</div>
+      <h3 id="action-title" class="text-2xl font-black text-slate-800">購地選擇</h3>
+      <p id="action-message" class="text-lg text-slate-600 font-medium leading-relaxed">
+        這是無主地，要購買嗎？
+      </p>
+
+      <div id="action-buttons" class="flex gap-4 pt-2">
+        <button id="action-cancel-btn" class="flex-1 py-3 bg-slate-400 hover:bg-slate-500 text-white font-black text-lg rounded-2xl shadow border-b-4 border-slate-600">
+          不買
+        </button>
+        <button id="action-confirm-btn" class="flex-1 py-3 bg-indigo-500 hover:bg-indigo-600 text-white font-black text-lg rounded-2xl shadow border-b-4 border-indigo-700">
+          買 ($150)
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 5. 命運/機會 卡片 Modal -->
+  <div id="card-modal" class="fixed inset-0 bg-black/60 backdrop-blur-sm hidden items-center justify-center p-4 z-50">
+    <div class="bg-white rounded-3xl shadow-2xl border-4 border-purple-400 w-full max-w-md p-6 text-center space-y-4">
+      <div id="card-type-badge" class="inline-block px-4 py-1 bg-purple-100 text-purple-700 font-black rounded-full text-lg">
+        🌟 幸運機會
+      </div>
+      <div id="card-icon" class="text-6xl my-2">🃏</div>
+      <h3 id="card-title" class="text-2xl font-black text-slate-800">抽到卡片！</h3>
+      <p id="card-description" class="text-lg text-slate-700 font-bold bg-amber-50 p-4 rounded-2xl border border-amber-200">
+        卡片內容...
+      </p>
+      <button id="card-close-btn" class="w-full py-3 bg-purple-600 hover:bg-purple-700 text-white font-black text-lg rounded-2xl shadow-lg border-b-4 border-purple-800">
+        確定
+      </button>
+    </div>
+  </div>
+
+  <!-- 6. 遊戲結束 / 勝負結算 Modal -->
+  <!-- 6. 遊戲結束 / 戰績結算 Modal -->
+  <div id="game-over-modal" class="fixed inset-0 bg-black/70 backdrop-blur-md hidden items-center justify-center p-4 z-50">
+    <div class="bg-white rounded-3xl shadow-2xl border-4 border-amber-400 w-full max-w-xl p-6 text-center space-y-5">
+      <div class="text-6xl animate-bounce">🏆</div>
+      <h2 class="text-3xl font-black text-amber-600">遊戲結束！</h2>
+      <p id="game-over-reason" class="text-slate-600 font-bold text-base bg-amber-50 py-2 px-4 rounded-xl border border-amber-200 inline-block"></p>
+      
+      <!-- 全體戰績統計表 -->
+      <div class="space-y-3 text-left">
+        <h4 class="font-bold text-slate-700 text-lg flex items-center justify-between flex-wrap gap-2">
+          <span>📊 玩家戰績總結：</span>
+          <span class="text-xs text-amber-800 bg-amber-100 px-3 py-1 rounded-full font-bold">* 請老師自訂勝負標準</span>
+        </h4>
+        <div id="final-leaderboard" class="space-y-2.5 max-h-60 overflow-y-auto pr-1">
+          <!-- 動態生成每位玩家戰績數據 -->
+        </div>
+      </div>
+
+      <button id="go-home-btn" class="w-full py-4 bg-amber-500 hover:bg-amber-600 active:scale-95 text-white font-black text-2xl rounded-2xl shadow-xl border-b-4 border-amber-700 transition">
+        🏠 回到主畫面
+      </button>
+    </div>
+  </div>
+
+  <script>
+    // 可選 Emoji 頭貼庫 (精簡為 5 個不重複選項)
+    const AVATAR_OPTIONS = ['🐶', '🐱', '🐰', '🦊', '🐻'];
+    const PLAYER_COLORS = [
+      { name: '紅隊', bg: 'bg-rose-500', border: 'border-rose-500', text: 'text-rose-600', ring: 'ring-rose-400', hex: '#ef4444' },
+      { name: '藍隊', bg: 'bg-blue-500', border: 'border-blue-500', text: 'text-blue-600', ring: 'ring-blue-400', hex: '#3b82f6' },
+      { name: '綠隊', bg: 'bg-emerald-500', border: 'border-emerald-500', text: 'text-emerald-600', ring: 'ring-emerald-400', hex: '#10b981' },
+      { name: '黃隊', bg: 'bg-amber-500', border: 'border-amber-500', text: 'text-amber-600', ring: 'ring-amber-400', hex: '#f59e0b' },
+      { name: '紫隊', bg: 'bg-purple-500', border: 'border-purple-500', text: 'text-purple-600', ring: 'ring-purple-400', hex: '#8b5cf6' },
+    ];
+
+    // 20 題英文題目庫與對應的高品質 SVG 圖表繪製
+    const QUESTIONS = [
+      {
+        id: 1,
+        text: "A: What day is today?<br>B: It’s ____________.",
+        hint: "看月曆上的標示，寫出星期名稱（例如 Tuesday）。",
+        svg: `<svg viewBox="0 0 300 160" class="w-full h-full"><rect width="300" height="160" rx="12" fill="#fff" stroke="#cbd5e1" stroke-width="2"/><rect width="300" height="40" rx="12" fill="#ef4444"/><text x="150" y="26" text-anchor="middle" fill="#fff" font-weight="bold" font-size="18">MAY 2026</text><g font-size="12" font-weight="bold" fill="#64748b" text-anchor="middle"><text x="30" y="60">Sun</text><text x="70" y="60">Mon</text><text x="110" y="60" fill="#ef4444">Tue</text><text x="150" y="60">Wed</text><text x="190" y="60">Thu</text><text x="230" y="60">Fri</text><text x="270" y="60">Sat</text></g><rect x="92" y="75" width="36" height="36" rx="8" fill="#fecdd3" stroke="#ef4444" stroke-width="2"/><text x="110" y="98" text-anchor="middle" font-weight="900" font-size="18" fill="#991b1b">12</text><text x="150" y="140" text-anchor="middle" fill="#334155" font-weight="bold" font-size="15">Today is May 12th</text></svg>`
+      },
+      {
+        id: 2,
+        text: "What day is today? (請讀出月曆標示的星期名稱)",
+        hint: "Mon = Monday, Tue = Tuesday, Wed = Wednesday, Thu = Thursday...",
+        svg: `<svg viewBox="0 0 300 160" class="w-full h-full"><rect width="300" height="160" rx="12" fill="#f8fafc" stroke="#cbd5e1" stroke-width="2"/><g transform="translate(15, 30)"><rect x="0" y="0" width="70" height="80" rx="10" fill="#3b82f6"/><text x="35" y="48" text-anchor="middle" fill="#fff" font-weight="900" font-size="22">THU</text><text x="140" y="48" text-anchor="middle" fill="#1e293b" font-weight="bold" font-size="18">← Today!</text></g></svg>`
+      },
+      {
+        id: 3,
+        text: "Read the words out:<br><span class='text-2xl text-amber-600 font-black'>wash / watch</span>",
+        hint: "注意尾音：wash (/ʃ/ 發「噓」聲) 與 watch (/tʃ/ 發「吃」聲)",
+        svg: `<svg viewBox="0 0 300 160" class="w-full h-full"><g transform="translate(20,20)"><rect width="110" height="120" rx="12" fill="#e0f2fe"/><text x="55" y="50" font-size="36" text-anchor="middle">🧼</text><text x="55" y="90" font-size="18" font-weight="bold" text-anchor="middle" fill="#0369a1">wash</text></g><g transform="translate(170,20)"><rect width="110" height="120" rx="12" fill="#fef3c7"/><text x="55" y="50" font-size="36" text-anchor="middle">⌚</text><text x="55" y="90" font-size="18" font-weight="bold" text-anchor="middle" fill="#b45309">watch</text></g></svg>`
+      },
+      {
+        id: 4,
+        text: "A: I go to bed at 11:00.<br>B: _______________.",
+        hint: "可以回答：That's late! 或 I go to bed at 10:00, too.",
+        svg: `<svg viewBox="0 0 300 160" class="w-full h-full"><rect width="300" height="160" rx="12" fill="#1e1b4b"/><circle cx="80" cy="80" r="40" fill="#fef08a"/><path d="M 120 40 A 40 40 0 0 1 120 120 A 30 30 0 0 0 120 40 Z" fill="#1e1b4b"/><text x="200" y="70" fill="#fff" font-size="28" font-weight="bold">11:00 PM</text><text x="200" y="105" fill="#a5f3fc" font-size="20">🛌 Go to bed</text></svg>`
+      },
+      {
+        id: 5,
+        text: "What does a zookeeper do in a day?",
+        hint: "回答句型：He/She washes the horse. 或 He takes care of animals.",
+        svg: `<svg viewBox="0 0 300 160" class="w-full h-full"><rect width="300" height="160" rx="12" fill="#f0fdf4"/><text x="70" y="90" font-size="50">🧑‍🌾</text><text x="130" y="90" font-size="24">🧼</text><text x="180" y="90" font-size="55">🐴</text><text x="150" y="140" text-anchor="middle" fill="#15803d" font-weight="bold" font-size="16">Zookeeper helping the horse</text></svg>`
+      },
+      {
+        id: 6,
+        text: "Read the words out:<br><span class='text-2xl text-amber-600 font-black'>shop / chop</span>",
+        hint: "shop (/ʃ/ 商店) 與 chop (/tʃ/ 砍/切)",
+        svg: `<svg viewBox="0 0 300 160" class="w-full h-full"><g transform="translate(20,20)"><rect width="110" height="120" rx="12" fill="#fce7f3"/><text x="55" y="50" font-size="36" text-anchor="middle">🏪</text><text x="55" y="90" font-size="18" font-weight="bold" text-anchor="middle" fill="#be185d">shop</text></g><g transform="translate(170,20)"><rect width="110" height="120" rx="12" fill="#ffedd5"/><text x="55" y="50" font-size="36" text-anchor="middle">🪓</text><text x="55" y="90" font-size="18" font-weight="bold" text-anchor="middle" fill="#c2410c">chop</text></g></svg>`
+      },
+      {
+        id: 7,
+        text: "Is the zoo closed on Sunday?",
+        hint: "看時刻表，標示 Closed = 關閉。回答：Yes, it is. / No, it isn't.",
+        svg: `<svg viewBox="0 0 300 160" class="w-full h-full"><rect width="300" height="160" rx="12" fill="#fff" stroke="#e2e8f0" stroke-width="2"/><rect width="300" height="35" fill="#16a34a" rx="12"/><text x="150" y="24" text-anchor="middle" fill="#fff" font-weight="bold" font-size="16">🦁 CITY ZOO HOURS 🐘</text><g font-size="14" font-weight="bold" fill="#334155"><text x="40" y="70">Mon - Sat:</text><text x="160" y="70" fill="#16a34a">09:00 - 17:00</text><text x="40" y="110">Sunday:</text><text x="160" y="110" fill="#dc2626">CLOSED ❌</text></g></svg>`
+      },
+      {
+        id: 8,
+        text: "A: What time does she ____________?<br>B: She ____________ at 07:30.",
+        hint: "動詞為 go to school，注意三單格式：goes to school。",
+        svg: `<svg viewBox="0 0 300 160" class="w-full h-full"><rect width="300" height="160" rx="12" fill="#fff" stroke="#cbd5e1"/><g transform="translate(40,40)"><circle cx="40" cy="40" r="35" fill="#f1f5f9" stroke="#0284c7" stroke-width="4"/><line x1="40" y1="40" x2="40" y2="20" stroke="#0284c7" stroke-width="4"/><line x1="40" y1="40" x2="20" y2="40" stroke="#0284c7" stroke-width="3"/><text x="40" y="92" text-anchor="middle" font-weight="bold" fill="#0369a1">07:30 AM</text></g><text x="180" y="70" font-size="45">🏫👧</text><text x="180" y="120" font-weight="bold" fill="#334155" font-size="16">Go to school</text></svg>`
+      },
+      {
+        id: 9,
+        text: "A: Is it Friday?<br>B: No, ____________. It's Thursday.",
+        hint: "回答：No, it isn't.",
+        svg: `<svg viewBox="0 0 300 160" class="w-full h-full"><rect width="300" height="160" rx="12" fill="#fff" stroke="#cbd5e1"/><rect x="80" y="25" width="140" height="110" rx="12" fill="#3b82f6"/><text x="150" y="60" text-anchor="middle" fill="#dbeafe" font-weight="bold" font-size="14">CALENDAR</text><text x="150" y="100" text-anchor="middle" fill="#fff" font-weight="900" font-size="28">THU</text></svg>`
+      },
+      {
+        id: 10,
+        text: "A: What _____ is today?<br>B: It's ____________.",
+        hint: "問星期填 day。答句根據手機畫面 (Fri) 回答 Friday。",
+        svg: `<svg viewBox="0 0 300 160" class="w-full h-full"><rect width="300" height="160" rx="12" fill="#f8fafc"/><rect x="100" y="10" width="100" height="140" rx="16" fill="#0f172a"/><rect x="106" y="16" width="88" height="128" rx="12" fill="#38bdf8"/><text x="150" y="55" text-anchor="middle" fill="#fff" font-weight="bold" font-size="20">09:41</text><text x="150" y="85" text-anchor="middle" fill="#f0f9ff" font-weight="bold" font-size="14">Friday</text><text x="150" y="105" text-anchor="middle" fill="#f0f9ff" font-size="12">Oct 24</text></svg>`
+      },
+      {
+        id: 11,
+        text: "A: I want to see the Fish Show. Is it Sunday today?<br>B: ___________________.",
+        hint: "看法定海報與日曆對照：Today is Sunday ➔ Yes, it is.",
+        svg: `<svg viewBox="0 0 300 160" class="w-full h-full"><rect width="300" height="160" rx="12" fill="#e0f2fe"/><g transform="translate(20,20)"><rect width="120" height="120" rx="10" fill="#0284c7"/><text x="60" y="40" text-anchor="middle" font-size="30">🐬</text><text x="60" y="75" text-anchor="middle" fill="#fff" font-weight="bold" font-size="13">FISH SHOW</text><text x="60" y="95" text-anchor="middle" fill="#bae6fd" font-size="11">EVERY SUNDAY</text></g><g transform="translate(160,20)"><rect width="120" height="120" rx="10" fill="#fff" stroke="#0284c7" stroke-width="2"/><text x="60" y="40" text-anchor="middle" fill="#64748b" font-size="12">TODAY</text><text x="60" y="80" text-anchor="middle" fill="#ef4444" font-weight="900" font-size="22">SUN</text></g></svg>`
+      },
+      {
+        id: 12,
+        text: "A: What time does Tod eat lunch?<br>B: He eats lunch at ________.",
+        hint: "根據時鐘指針，12:00 (twelve o'clock / 12:00).",
+        svg: `<svg viewBox="0 0 300 160" class="w-full h-full"><rect width="300" height="160" rx="12" fill="#f0fdf4"/><text x="60" y="95" font-size="50">🐢🥗</text><g transform="translate(170,30)"><circle cx="50" cy="50" r="40" fill="#fff" stroke="#16a34a" stroke-width="4"/><line x1="50" y1="50" x2="50" y2="20" stroke="#16a34a" stroke-width="4"/><line x1="50" y1="50" x2="50" y2="15" stroke="#dc2626" stroke-width="2"/><text x="50" y="105" text-anchor="middle" font-weight="bold" fill="#15803d" font-size="14">12:00 PM</text></g></svg>`
+      },
+      {
+        id: 13,
+        text: "A: What time do you __________?<br>B: At 9:00.",
+        hint: "圖示為睡覺：go to bed。",
+        svg: `<svg viewBox="0 0 300 160" class="w-full h-full"><rect width="300" height="160" rx="12" fill="#312e81"/><text x="80" y="100" font-size="55">🛌😴</text><text x="190" y="90" fill="#fef08a" font-weight="900" font-size="32">09:00</text><text x="190" y="120" fill="#a5f3fc" font-size="16">PM</text></svg>`
+      },
+      {
+        id: 14,
+        text: "Read the words out:<br><span class='text-2xl text-amber-600 font-black'>dolphin / whale</span>",
+        hint: "dolphin (海豚) / whale (鯨魚)",
+        svg: `<svg viewBox="0 0 300 160" class="w-full h-full"><g transform="translate(20,20)"><rect width="110" height="120" rx="12" fill="#e0f2fe"/><text x="55" y="50" font-size="36" text-anchor="middle">🐬</text><text x="55" y="90" font-size="18" font-weight="bold" text-anchor="middle" fill="#0369a1">dolphin</text></g><g transform="translate(170,20)"><rect width="110" height="120" rx="12" fill="#dbeafe"/><text x="55" y="50" font-size="36" text-anchor="middle">🐳</text><text x="55" y="90" font-size="18" font-weight="bold" text-anchor="middle" fill="#1d4ed8">whale</text></g></svg>`
+      },
+      {
+        id: 15,
+        text: "請說出兩個會造成海龜受傷的原因。我們該如何保護海龜？",
+        hint: "原因：塑膠垃圾 (plastic bags/straws)、海洋污染、漁網；保護方法：減少使用一次性塑膠、不亂丟垃圾。",
+        svg: `<svg viewBox="0 0 300 160" class="w-full h-full"><rect width="300" height="160" rx="12" fill="#0284c7"/><text x="50" y="90" font-size="50">🐢</text><text x="120" y="70" font-size="30">🥤</text><text x="160" y="110" font-size="30">🛍️</text><text x="220" y="70" font-size="30">⚠️</text><text x="150" y="145" text-anchor="middle" fill="#fff" font-weight="bold" font-size="14">Protect Ocean Life!</text></svg>`
+      },
+      {
+        id: 16,
+        text: "A: ______________?<br>B: Yes, it is.",
+        hint: "問句：Is the burger special on Friday? 或 Is it Friday today?",
+        svg: `<svg viewBox="0 0 300 160" class="w-full h-full"><rect width="300" height="160" rx="12" fill="#fff" stroke="#cbd5e1"/><g transform="translate(20,30)"><text x="40" y="60" font-size="45">🍔🛺</text></g><g transform="translate(140,20)"><rect width="140" height="120" rx="10" fill="#fef3c7" stroke="#f59e0b" stroke-width="2"/><text x="70" y="35" text-anchor="middle" font-weight="bold" fill="#b45309" font-size="14">SPECIAL OFFER</text><text x="70" y="65" text-anchor="middle" font-weight="900" fill="#d97706" font-size="16">Friday Burger</text><text x="70" y="95" text-anchor="middle" font-weight="bold" fill="#16a34a" font-size="18">$5 Only!</text></g></svg>`
+      },
+      {
+        id: 17,
+        text: "What time does Tod go to find food?",
+        hint: "根據時鐘顯示：He goes to find food at 06:30 AM.",
+        svg: `<svg viewBox="0 0 300 160" class="w-full h-full"><rect width="300" height="160" rx="12" fill="#ecfdf5"/><text x="50" y="90" font-size="45">🐢🔍🌿</text><g transform="translate(180,30)"><circle cx="45" cy="45" r="35" fill="#fff" stroke="#059669" stroke-width="3"/><line x1="45" y1="45" x2="25" y2="45" stroke="#059669" stroke-width="3"/><line x1="45" y1="45" x2="45" y2="65" stroke="#059669" stroke-width="3"/><text x="45" y="98" text-anchor="middle" font-weight="bold" fill="#047857" font-size="13">06:30 AM</text></g></svg>`
+      },
+      {
+        id: 18,
+        text: "Read the words out:<br><span class='text-2xl text-amber-600 font-black'>wheel / phone</span>",
+        hint: "wheel (車輪) / phone (電話)",
+        svg: `<svg viewBox="0 0 300 160" class="w-full h-full"><g transform="translate(20,20)"><rect width="110" height="120" rx="12" fill="#f1f5f9"/><text x="55" y="50" font-size="36" text-anchor="middle">🎡</text><text x="55" y="90" font-size="18" font-weight="bold" text-anchor="middle" fill="#475569">wheel</text></g><g transform="translate(170,20)"><rect width="110" height="120" rx="12" fill="#f0fdf4"/><text x="55" y="50" font-size="36" text-anchor="middle">📱</text><text x="55" y="90" font-size="18" font-weight="bold" text-anchor="middle" fill="#16a34a">phone</text></g></svg>`
+      },
+      {
+        id: 19,
+        text: "A: What _____ you _____ at 12:40?<br>B: I ____________ at 12:40.",
+        hint: "圖示為吃午餐：What do you do...? / I eat lunch at 12:40.",
+        svg: `<svg viewBox="0 0 300 160" class="w-full h-full"><rect width="300" height="160" rx="12" fill="#fff" stroke="#cbd5e1"/><g transform="translate(10,30)"><text x="30" y="40" font-size="28">🌅 06:30</text><text x="30" y="75" font-size="28">🍱 12:40</text><text x="30" y="110" font-size="28">🌙 21:00</text></g><rect x="150" y="50" width="130" height="40" rx="8" fill="#fef3c7" stroke="#f59e0b" stroke-width="2"/><text x="215" y="75" text-anchor="middle" font-weight="bold" fill="#b45309" font-size="14">Focus on 12:40!</text></svg>`
+      },
+      {
+        id: 20,
+        text: "A: ______ time do you ______?<br>B: I ____________ at 07:00.",
+        hint: "填空：What time do you get up? / I get up at 07:00.",
+        svg: `<svg viewBox="0 0 300 160" class="w-full h-full"><rect width="300" height="160" rx="12" fill="#fef3c7"/><text x="70" y="95" font-size="55">⏰🥱</text><text x="180" y="80" font-size="24" font-weight="900" fill="#d97706">07:00 AM</text><text x="180" y="110" font-size="16" font-weight="bold" fill="#78350f">Get up!</text></svg>`
+      }
+    ];
+
+    // 遊戲狀態變數
+    let players = [];
+    let currentTurnIndex = 0;
+    let boardTiles = [];
+    let isRolling = false;
+    let gameTimer = null;
+    let remainingSeconds = 600;
+    let activeQuestion = null;
+    let currentLandedTileIndex = null;
+
+    // DOM 元素引用
+    const startScreen = document.getElementById('start-screen');
+    const gameScreen = document.getElementById('game-screen');
+    const playerCountSelect = document.getElementById('player-count-select');
+    const playerInputsContainer = document.getElementById('player-inputs-container');
+    const startGameBtn = document.getElementById('start-game-btn');
+    const boardGrid = document.getElementById('board-grid');
+    const playersDashboard = document.getElementById('players-dashboard');
+    const currentPlayerBadge = document.getElementById('current-player-badge');
+    const timerDisplay = document.getElementById('timer-display');
+    const gameLog = document.getElementById('game-log');
+    const diceContainer = document.getElementById('dice-container');
+    const diceCube = document.getElementById('dice-cube');
+
+    // Modals
+    const questionModal = document.getElementById('question-modal');
+    const actionModal = document.getElementById('action-modal');
+    const cardModal = document.getElementById('card-modal');
+    const gameOverModal = document.getElementById('game-over-modal');
+
+    // 初始化玩家設定介面
+    function renderPlayerInputs() {
+      const count = parseInt(playerCountSelect.value);
+      playerInputsContainer.innerHTML = '';
+
+      for (let i = 0; i < count; i++) {
+        const color = PLAYER_COLORS[i % PLAYER_COLORS.length];
+        const defaultAvatar = AVATAR_OPTIONS[i % AVATAR_OPTIONS.length];
+
+        const div = document.createElement('div');
+        div.className = 'bg-white p-3 rounded-xl border-2 border-amber-200 flex items-center gap-3 shadow-sm';
+        div.innerHTML = `
+          <div class="w-8 h-8 rounded-full ${color.bg} text-white flex items-center justify-center font-bold text-sm">
+            ${i + 1}
+          </div>
+          <input type="text" class="player-name-input flex-1 p-2 border border-slate-300 rounded-lg font-bold text-slate-700" value="玩家 ${i + 1}" placeholder="輸入名稱">
+          <select class="player-avatar-select p-2 bg-amber-50 border border-amber-300 rounded-lg text-xl font-bold">
+            ${AVATAR_OPTIONS.map((av, idx) => `
+              <option value="${av}" ${av === defaultAvatar ? 'selected' : ''}>${av}</option>
+            `).join('')}
+          </select>
+        `;
+        playerInputsContainer.appendChild(div);
+      }
+
+      // 避免玩家選擇重複頭貼的監聽
+      const avatarSelects = document.querySelectorAll('.player-avatar-select');
+      avatarSelects.forEach(select => {
+        select.addEventListener('change', updateAvatarSelectOptions);
+      });
+      updateAvatarSelectOptions();
+    }
+
+    function updateAvatarSelectOptions() {
+      const selects = Array.from(document.querySelectorAll('.player-avatar-select'));
+      const selectedValues = selects.map(s => s.value);
+
+      selects.forEach(select => {
+        const currentVal = select.value;
+        Array.from(select.options).forEach(opt => {
+          if (opt.value !== currentVal && selectedValues.includes(opt.value)) {
+            opt.disabled = true;
+          } else {
+            opt.disabled = false;
+          }
+        });
+      });
+    }
+
+    playerCountSelect.addEventListener('change', renderPlayerInputs);
+    renderPlayerInputs();
+
+    // 口字型 (Perimeter) 20格 Grid 索引地圖對應
+    // 6x6 網格：
+    // Top Row: (1,1) to (1,6) -> 0..5
+    // Right Col: (2,6) to (5,6) -> 6..9
+    // Bottom Row: (6,6) to (6,1) -> 10..15 (Tile 10 = Chance, Tile 15 = Fate)
+    // Left Col: (5,1) to (2,1) -> 16..19
+    const GRID_POSITIONS = [
+      { r: 1, c: 1 }, { r: 1, c: 2 }, { r: 1, c: 3 }, { r: 1, c: 4 }, { r: 1, c: 5 }, { r: 1, c: 6 },
+      { r: 2, c: 6 }, { r: 3, c: 6 }, { r: 4, c: 6 }, { r: 5, c: 6 },
+      { r: 6, c: 6 }, // Tile 10: 機會 Chance (Bottom Right Corner)
+      { r: 6, c: 5 }, { r: 6, c: 4 }, { r: 6, c: 3 }, { r: 6, c: 2 },
+      { r: 6, c: 1 }, // Tile 15: 命運 Fate (Bottom Left Corner)
+      { r: 5, c: 1 }, { r: 4, c: 1 }, { r: 3, c: 1 }, { r: 2, c: 1 }
+    ];
+
+    function initializeBoard() {
+      boardTiles = [];
+      for (let i = 0; i < 20; i++) {
+        let type = 'property';
+        let price = Math.floor(Math.random() * 21) * 10 + 100; // $100 ~ $300 隨機金額
+
+        if (i === 10) type = 'chance'; // 機會
+        if (i === 15) type = 'fate';   // 命運
+        if (i === 0) type = 'start';   // 起點
+
+        boardTiles.push({
+          id: i,
+          type: type,
+          price: price,
+          owner: null // 擁有者玩家索引
+        });
+      }
+      renderBoard();
+    }
+
+    function renderBoard() {
+      boardGrid.innerHTML = '';
+
+      boardTiles.forEach((tile, index) => {
+        const pos = GRID_POSITIONS[index];
+        const tileEl = document.createElement('div');
+        tileEl.id = `tile-${index}`;
+        tileEl.style.gridRow = pos.r;
+        tileEl.style.gridColumn = pos.c;
+
+        let tileBg = 'bg-white';
+        let borderStyle = 'border-amber-300';
+        let contentHtml = '';
+
+        if (tile.type === 'start') {
+          tileBg = 'bg-emerald-100';
+          contentHtml = `<span class="text-xs font-bold text-emerald-800">START</span><span class="text-xl">🚩</span>`;
+        } else if (tile.type === 'chance') {
+          tileBg = 'bg-purple-100';
+          contentHtml = `<span class="text-xs font-bold text-purple-800">機會</span><span class="text-2xl">❓</span>`;
+        } else if (tile.type === 'fate') {
+          tileBg = 'bg-amber-100';
+          contentHtml = `<span class="text-xs font-bold text-amber-800">命運</span><span class="text-2xl">⚡</span>`;
+        } else {
+          // 一般地產格 (只顯示購地價格)
+          contentHtml = `<span class="text-xs md:text-sm font-black text-slate-600">$${tile.price}</span>`;
+        }
+
+        // 若已被佔領，顯示擁有者色彩與頭貼標籤
+        if (tile.owner !== null) {
+          const owner = players[tile.owner];
+          borderStyle = `${owner.color.border} border-4 shadow-md`;
+          contentHtml += `<div class="absolute -top-2 -right-2 w-7 h-7 ${owner.color.bg} rounded-full text-white flex items-center justify-center text-sm shadow">${owner.avatar}</div>`;
+        }
+
+        tileEl.className = `${tileBg} border-2 ${borderStyle} rounded-2xl flex flex-col items-center justify-center relative p-1 shadow-sm transition-all duration-200 overflow-visible`;
+        tileEl.innerHTML = contentHtml;
+
+        // 放置停留在該格的玩家 Avatar 標誌
+        const avatarsOnTile = players.filter(p => p.position === index);
+        if (avatarsOnTile.length > 0) {
+          const avatarContainer = document.createElement('div');
+          avatarContainer.className = 'absolute -bottom-2 flex gap-0.5 justify-center z-20';
+          avatarsOnTile.forEach(p => {
+            const badge = document.createElement('span');
+            badge.className = `w-7 h-7 rounded-full ${p.color.bg} border-2 border-white text-white flex items-center justify-center text-sm font-bold shadow-lg transform hover:scale-125 transition`;
+            badge.innerText = p.avatar;
+            avatarContainer.appendChild(badge);
+          });
+          tileEl.appendChild(avatarContainer);
+        }
+
+        boardGrid.appendChild(tileEl);
+      });
+    }
+
+    startGameBtn.addEventListener('click', () => {
+      const nameInputs = document.querySelectorAll('.player-name-input');
+      const avatarSelects = document.querySelectorAll('.player-avatar-select');
+      const startMoney = parseInt(document.getElementById('start-money-input').value) || 500;
+      const timeMinutes = parseInt(document.getElementById('game-time-input').value) || 10;
+
+      players = [];
+      nameInputs.forEach((input, i) => {
+        players.push({
+          id: i,
+          name: input.value.trim() || `玩家 ${i + 1}`,
+          avatar: avatarSelects[i].value,
+          color: PLAYER_COLORS[i % PLAYER_COLORS.length],
+          money: startMoney,
+          position: 0,
+          answeredQuestions: [], // 記錄已回答的題目 ID
+          correctCount: 0,       // 記錄答對題數
+          cards: { hint: 0, mutual: 0 } // 持有機會卡
+        });
+      });
+
+      remainingSeconds = timeMinutes * 60;
+      currentTurnIndex = 0;
+
+      startScreen.classList.add('hidden');
+      gameScreen.classList.remove('hidden');
+      gameScreen.classList.add('flex');
+
+      initializeBoard();
+      updateDashboard();
+      startTimer();
+      logMessage(`🎮 遊戲開始！每位玩家獲得起始資金 $${startMoney}。`, 'emerald');
+    });
+
+    function startTimer() {
+      if (gameTimer) clearInterval(gameTimer);
+      gameTimer = setInterval(() => {
+        remainingSeconds--;
+        const mins = Math.floor(remainingSeconds / 60);
+        const secs = remainingSeconds % 60;
+        timerDisplay.innerText = `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+
+        if (remainingSeconds <= 0) {
+          clearInterval(gameTimer);
+          endGame('時間到！');
+        }
+      }, 1000);
+    }
+
+    function updateDashboard() {
+      const currentPlayer = players[currentTurnIndex];
+      
+      // 頂部當前玩家 Badge
+      currentPlayerBadge.className = `px-4 py-2 rounded-xl text-white font-bold text-lg flex items-center gap-2 shadow ${currentPlayer.color.bg}`;
+      currentPlayerBadge.innerHTML = `<span>${currentPlayer.avatar}</span> <span>${currentPlayer.name}</span> <span class="bg-white/20 px-2 py-0.5 rounded-lg text-sm">$${currentPlayer.money}</span>`;
+
+      // 中央玩家卡片列
+      playersDashboard.innerHTML = '';
+      players.forEach((p, idx) => {
+        const isCurrent = idx === currentTurnIndex;
+        const card = document.createElement('div');
+        card.className = `px-3 py-1.5 rounded-xl border-2 font-bold text-xs md:text-sm flex items-center gap-1.5 shadow-sm transition ${isCurrent ? `${p.color.border} bg-amber-100 ring-2 ${p.color.ring} scale-105` : 'border-slate-200 bg-white opacity-80'}`;
+        card.innerHTML = `
+          <span>${p.avatar}</span>
+          <span class="text-slate-700">${p.name}</span>
+          <span class="font-black ${p.color.text}">$${p.money}</span>
+          ${(p.cards.hint > 0 || p.cards.mutual > 0) ? '<span class="text-xs">🃏</span>' : ''}
+        `;
+        playersDashboard.appendChild(card);
+      });
+
+      renderBoard();
+    }
+
+    function logMessage(msg, color = 'slate') {
+      const div = document.createElement('div');
+      div.className = `py-0.5 text-${color}-600 font-medium`;
+      div.innerHTML = `• ${msg}`;
+      gameLog.appendChild(div);
+      gameLog.scrollTop = gameLog.scrollHeight;
+    }
+
+    diceContainer.addEventListener('click', rollDice);
+
+    function rollDice() {
+      if (isRolling) return;
+      isRolling = true;
+
+      const player = players[currentTurnIndex];
+      const steps = Math.floor(Math.random() * 6) + 1; // 1~6 點
+
+      // 3D 骰子旋轉角度計算
+      const rotations = {
+        1: { x: 0, y: 0 },
+        2: { x: 0, y: -90 },
+        3: { x: 0, y: -180 },
+        4: { x: 0, y: 90 },
+        5: { x: -90, y: 0 },
+        6: { x: 90, y: 0 }
+      };
+
+      const targetRot = rotations[steps];
+      const extraSpinX = (Math.floor(Math.random() * 3) + 2) * 360;
+      const extraSpinY = (Math.floor(Math.random() * 3) + 2) * 360;
+
+      diceCube.style.transform = `rotateX(${targetRot.x + extraSpinX}deg) rotateY(${targetRot.y + extraSpinY}deg)`;
+
+      logMessage(`${player.avatar} ${player.name} 擲出了 <b>${steps}</b> 點！`, 'amber');
+
+      setTimeout(() => {
+        isRolling = false;
+        movePlayer(player, steps);
+      }, 1250);
+    }
+
+    function movePlayer(player, steps) {
+      let currentStep = 0;
+      const interval = setInterval(() => {
+        player.position = (player.position + 1) % 20;
+        currentStep++;
+        renderBoard();
+
+        if (currentStep >= steps) {
+          clearInterval(interval);
+          handleTileLanding(player, player.position);
+        }
+      }, 250);
+    }
+
+    function handleTileLanding(player, tileIndex) {
+      currentLandedTileIndex = tileIndex;
+      const tile = boardTiles[tileIndex];
+
+      if (tile.type === 'fate') {
+        handleFateTile(player);
+      } else if (tile.type === 'chance') {
+        handleChanceTile(player);
+      } else {
+        // 一般題目格或起點格，自動彈出題目 modal
+        triggerQuestionModal(player);
+      }
+    }
+
+    // 命運格子 (Fate)
+    function handleFateTile(player) {
+      const options = [
+        { text: '前進一格', move: 1 },
+        { text: '前進兩格', move: 2 },
+        { text: '後退一格', move: -1 },
+        { text: '後退兩格', move: -2 }
+      ];
+      const result = options[Math.floor(Math.random() * options.length)];
+
+      showCardModal('⚡ 命運觸發！', '🎲 命運卡片', result.text, () => {
+        player.position = (player.position + result.move + 20) % 20;
+        renderBoard();
+        logMessage(`${player.avatar} ${player.name} 因命運【${result.text}】，移至第 ${player.position} 格。`, 'purple');
+        // 移動後回答新格子的題目
+        triggerQuestionModal(player);
+      });
+    }
+
+    // 機會格子 (Chance)
+    function handleChanceTile(player) {
+      const cards = [
+        { type: 'hint', title: '💡 老師提示卡', desc: '下次回答題目時可點擊使用，由課堂老師口頭給予提示！' },
+        { type: 'mutual', title: '🤝 守望相助卡', desc: '下次回答題目時可點擊使用，由同學口頭給予提示！' }
+      ];
+      const chosen = cards[Math.floor(Math.random() * cards.length)];
+
+      if (chosen.type === 'hint') player.cards.hint++;
+      if (chosen.type === 'mutual') player.cards.mutual++;
+
+      showCardModal('🌟 機會卡牌！', chosen.title, chosen.desc, () => {
+        logMessage(`${player.avatar} ${player.name} 獲得了一張【${chosen.title}】！`, 'purple');
+        nextTurn();
+      });
+    }
+
+    function showCardModal(badge, title, desc, onClose) {
+      document.getElementById('card-type-badge').innerText = badge;
+      document.getElementById('card-title').innerText = title;
+      document.getElementById('card-description').innerText = desc;
+      cardModal.classList.remove('hidden');
+      cardModal.classList.add('flex');
+
+      const closeBtn = document.getElementById('card-close-btn');
+      const handler = () => {
+        cardModal.classList.add('hidden');
+        cardModal.classList.remove('flex');
+        closeBtn.removeEventListener('click', handler);
+        if (onClose) onClose();
+      };
+      closeBtn.addEventListener('click', handler);
+    }
+
+    function triggerQuestionModal(player) {
+      // 挑選未回答過的題目
+      let availableQuestions = QUESTIONS.filter(q => !player.answeredQuestions.includes(q.id));
+      if (availableQuestions.length === 0) {
+        // 重置讓玩家可循環複習
+        player.answeredQuestions = [];
+        availableQuestions = QUESTIONS;
+      }
+
+      activeQuestion = availableQuestions[Math.floor(Math.random() * availableQuestions.length)];
+      player.answeredQuestions.push(activeQuestion.id);
+
+      document.getElementById('modal-player-title').innerText = `👤 ${player.avatar} ${player.name} 答題時間`;
+      document.getElementById('question-illustration').innerHTML = activeQuestion.svg;
+      document.getElementById('question-text').innerHTML = activeQuestion.text;
+
+      // 檢查卡片提示
+      const hintContainer = document.getElementById('hint-container');
+      const hintButtonsWrapper = document.getElementById('hint-buttons-wrapper');
+      const hintText = document.getElementById('hint-text');
+
+      hintText.classList.add('hidden');
+      hintButtonsWrapper.innerHTML = '';
+
+      let hasCard = false;
+
+      // 1. 老師提示卡
+      if (player.cards.hint > 0) {
+        hasCard = true;
+        const btn = document.createElement('button');
+        btn.className = 'w-full py-2.5 bg-amber-500 hover:bg-amber-600 text-white font-bold rounded-xl shadow transition text-base';
+        btn.innerHTML = '💡 使用「老師提示卡」';
+        btn.onclick = () => {
+          player.cards.hint--;
+          hintText.innerText = '📢 已使用「老師提示卡」！請老師口頭給予提示。';
+          hintText.classList.remove('hidden');
+          btn.remove();
+          updateDashboard();
+        };
+        hintButtonsWrapper.appendChild(btn);
+      }
+
+      // 2. 守望相助卡
+      if (player.cards.mutual > 0) {
+        hasCard = true;
+        const btn = document.createElement('button');
+        btn.className = 'w-full py-2.5 bg-indigo-500 hover:bg-indigo-600 text-white font-bold rounded-xl shadow transition text-base';
+        btn.innerHTML = '🤝 使用「守望相助卡」';
+        btn.onclick = () => {
+          player.cards.mutual--;
+          hintText.innerText = '📢 已使用「守望相助卡」！請同學口頭給予提示。';
+          hintText.classList.remove('hidden');
+          btn.remove();
+          updateDashboard();
+        };
+        hintButtonsWrapper.appendChild(btn);
+      }
+
+      if (hasCard) {
+        hintContainer.classList.remove('hidden');
+      } else {
+        hintContainer.classList.add('hidden');
+      }
+
+      questionModal.classList.remove('hidden');
+      questionModal.classList.add('flex');
+    }
+
+    // 手動判定「答對」或「答錯」按鈕監聽
+    document.getElementById('answer-correct-btn').addEventListener('click', () => {
+      questionModal.classList.add('hidden');
+      questionModal.classList.remove('flex');
+      handleAnswerResult(true);
+    });
+
+    document.getElementById('answer-wrong-btn').addEventListener('click', () => {
+      questionModal.classList.add('hidden');
+      questionModal.classList.remove('flex');
+      handleAnswerResult(false);
+    });
+
+    function handleAnswerResult(isCorrect) {
+      const player = players[currentTurnIndex];
+      const tile = boardTiles[currentLandedTileIndex];
+
+      if (isCorrect) {
+        player.correctCount++; // 累計答對題數
+        player.money += 100; // 答對獎勵金 $100
+        logMessage(`⭕ ${player.avatar} ${player.name} 答對題目！獲得獎勵金 $100！`, 'emerald');
+
+        // 處理解答後的領地邏輯
+        if (tile.type === 'property') {
+          if (tile.owner === null) {
+            // 無主地：跳出買地選擇 (需檢視總現金是否足夠)
+            promptLandPurchase(player, tile);
+          } else if (tile.owner !== player.id) {
+            // 他人領地：顯示「恭喜答對！但這土地已被購買，需給予過路費」提示視窗
+            const owner = players[tile.owner];
+            showCardModal(
+              '💸 支付過路費',
+              '恭喜答對！但這土地已被購買，需給予過路費',
+              `已發放獎勵金 $100！本格屬於 ${owner.avatar} ${owner.name}，過路費為 $${tile.price}（與購地金額一致）。`,
+              () => {
+                payRent(player, tile);
+              }
+            );
+          } else {
+            logMessage(`🏠 ${player.avatar} ${player.name} 停留於自己的土地。`, 'blue');
+            nextTurn();
+          }
+        } else {
+          nextTurn();
+        }
+      } else {
+        logMessage(`❌ ${player.avatar} ${player.name} 答錯題目，無法獲得 $100 獎勵金。`, 'rose');
+        
+        // 答錯時彈出鼓勵視窗
+        showCardModal('💪 再接再勵', '答錯囉！', '下次再加油~你一定可以！', () => {
+          if (tile.type === 'property' && tile.owner !== null && tile.owner !== player.id) {
+            // 答錯停留他人土地仍須付過路費
+            payRent(player, tile);
+          } else {
+            nextTurn();
+          }
+        });
+      }
+    }
+
+    // 購地流程 Prompt
+    function promptLandPurchase(player, tile) {
+      if (player.money < tile.price) {
+        // 現金總額不足提醒
+        showCardModal('⚠️ 購地提醒', '現金不足', `本格子金額為 $${tile.price}，您目前持有現金 $${player.money}，現金不足無法購買。`, () => {
+          nextTurn();
+        });
+        return;
+      }
+
+      document.getElementById('action-title').innerText = '獲得獎勵金100$！取得購地權';
+      document.getElementById('action-message').innerHTML = `恭喜答對！已發放獎勵金 $100。<br>這是一塊無主地，購地價格為 <b class="text-amber-600 text-xl">$${tile.price}</b>，要購買嗎？`;
+      document.getElementById('action-confirm-btn').innerText = `買 ($${tile.price})`;
+      document.getElementById('action-cancel-btn').innerText = '不買';
+
+      actionModal.classList.remove('hidden');
+      actionModal.classList.add('flex');
+
+      const confirmBtn = document.getElementById('action-confirm-btn');
+      const cancelBtn = document.getElementById('action-cancel-btn');
+
+      const handleBuy = () => {
+        actionModal.classList.add('hidden');
+        actionModal.classList.remove('flex');
+        player.money -= tile.price;
+        tile.owner = player.id;
+        logMessage(`🎉 ${player.avatar} ${player.name} 花費 $${tile.price} 成功購買了地產！`, 'indigo');
+        cleanup();
+        nextTurn();
+      };
+
+      const handleSkip = () => {
+        actionModal.classList.add('hidden');
+        actionModal.classList.remove('flex');
+        logMessage(`${player.avatar} ${player.name} 選擇不購買此地產。`, 'slate');
+        cleanup();
+        nextTurn();
+      };
+
+      function cleanup() {
+        confirmBtn.removeEventListener('click', handleBuy);
+        cancelBtn.removeEventListener('click', handleSkip);
+      }
+
+      confirmBtn.addEventListener('click', handleBuy);
+      cancelBtn.addEventListener('click', handleSkip);
+    }
+
+    // 支付過路費
+    function payRent(player, tile) {
+      const owner = players[tile.owner];
+      const rent = tile.price;
+
+      player.money -= rent;
+      owner.money += rent;
+
+      logMessage(`💸 ${player.avatar} ${player.name} 停留在 ${owner.avatar} ${owner.name} 的領地，支付過路費 $${rent}！`, 'rose');
+
+      if (player.money <= 0) {
+        endGame(`${player.avatar} ${player.name} 現金歸零破產！`);
+      } else {
+        nextTurn();
+      }
+    }
+
+    function nextTurn() {
+      updateDashboard();
+
+      // 檢查破產條件
+      const bankruptPlayer = players.find(p => p.money <= 0);
+      if (bankruptPlayer) {
+        endGame(`${bankruptPlayer.avatar} ${bankruptPlayer.name} 現金歸零破產！`);
+        return;
+      }
+
+      currentTurnIndex = (currentTurnIndex + 1) % players.length;
+      updateDashboard();
+      logMessage(`👉 輪到 ${players[currentTurnIndex].avatar} <b>${players[currentTurnIndex].name}</b> 的回合。`, 'amber');
+    }
+
+    // 遊戲結束與結算戰績
+    function endGame(reason) {
+      if (gameTimer) {
+        clearInterval(gameTimer);
+        gameTimer = null;
+      }
+
+      document.getElementById('game-over-reason').innerText = `結算原因：${reason}`;
+
+      const leaderboard = document.getElementById('final-leaderboard');
+      leaderboard.innerHTML = '';
+
+      // 依玩家原始順序列出數據，不依金額強制排序，方便老師自訂勝負標準
+      players.forEach((p) => {
+        const ownedProps = boardTiles.filter(t => t.type === 'property' && t.owner === p.id).length;
+        const item = document.createElement('div');
+        item.className = 'p-3.5 bg-slate-50 rounded-2xl border-2 border-slate-200 flex items-center justify-between font-bold text-sm md:text-base shadow-sm';
+        item.innerHTML = `
+          <div class="flex items-center gap-2 md:gap-3">
+            <span class="text-2xl">${p.avatar}</span>
+            <span class="text-slate-800 font-black">${p.name}</span>
+          </div>
+          <div class="flex items-center gap-2 md:gap-3 flex-wrap justify-end">
+            <span class="text-xs md:text-sm text-amber-900 bg-amber-100 px-2.5 py-1 rounded-xl border border-amber-300 font-bold">🏠 購地：${ownedProps} 塊</span>
+            <span class="text-xs md:text-sm text-emerald-900 bg-emerald-100 px-2.5 py-1 rounded-xl border border-emerald-300 font-bold">⭕ 答對：${p.correctCount || 0} 題</span>
+            <span class="text-xs md:text-sm text-indigo-900 bg-indigo-100 px-2.5 py-1 rounded-xl border border-indigo-300 font-bold">💰 剩餘：$${p.money}</span>
+          </div>
+        `;
+        leaderboard.appendChild(item);
+      });
+
+      gameOverModal.classList.remove('hidden');
+      gameOverModal.classList.add('flex');
+    }
+
+    // 重置遊戲並回到主畫面設定頁面
+    function resetGameToHome() {
+      if (gameTimer) {
+        clearInterval(gameTimer);
+        gameTimer = null;
+      }
+
+      // 重置所有遊戲狀態變數
+      players = [];
+      currentTurnIndex = 0;
+      boardTiles = [];
+      isRolling = false;
+      remainingSeconds = 600;
+      activeQuestion = null;
+      currentLandedTileIndex = null;
+
+      // 清空遊戲歷程紀錄
+      gameLog.innerHTML = '<div class="text-emerald-600 font-bold">🎮 遊戲正式開始！請點擊骰子進行移動。</div>';
+
+      // 關閉所有彈出的 Modal
+      gameOverModal.classList.add('hidden');
+      gameOverModal.classList.remove('flex');
+      questionModal.classList.add('hidden');
+      questionModal.classList.remove('flex');
+      actionModal.classList.add('hidden');
+      actionModal.classList.remove('flex');
+      cardModal.classList.add('hidden');
+      cardModal.classList.remove('flex');
+
+      // 切換畫面回主設定頁面
+      gameScreen.classList.add('hidden');
+      gameScreen.classList.remove('flex');
+      startScreen.classList.remove('hidden');
+
+      // 重新生成玩家輸入欄位
+      renderPlayerInputs();
+    }
+
+    // 點擊「回到主畫面」按鈕執行完整重置
+    document.getElementById('go-home-btn').addEventListener('click', resetGameToHome);
+  </script>
+</body>
+</html>
